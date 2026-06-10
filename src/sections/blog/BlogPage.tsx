@@ -63,7 +63,6 @@ export default function BlogPage({
                     <Pagination
                       currentPage={currentPage}
                       totalPages={totalPages}
-                      basePath="/blog"
                     />
                   )}
                 </>
