@@ -27,7 +27,7 @@ function BookButton({ label, serviceId }: { label: string; serviceId?: string | 
       <span className="absolute inset-0 border border-[#b89a6a]" />
       <span className="relative z-10 text-[11px] font-bold tracking-[2.5px] uppercase"
         style={{ color: hovered ? "#fff" : "#b89a6a", transition: "color 0.3s ease" }}>
-        Đặt Ngay — Ưu Đãi Hôm Nay
+       Đặt Ngay — Ưu Đãi Hôm Nay
       </span>
     </button>
   )
@@ -122,7 +122,7 @@ export default function ComboDetailHero({ combo }: { combo: ComboDetail }) {
               </div>
 
               <div className="hero-fadein" style={{ animationDelay: "0.48s" }}>
-                <BookButton />
+                <BookButton label="Đặt lịch ngay"/>
               </div>
             </div>
 
