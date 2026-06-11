@@ -65,7 +65,14 @@ export default function BookingTrigger({
       className={`uppercase tracking-[2px] ${className}`}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => openBooking(serviceId)}
+      onClick={() =>
+        serviceId
+          ? openBooking({
+            id: serviceId,
+            type: "service",
+          })
+          : openBooking()
+      }
     >
       {/* Sliding fill */}
       <span
