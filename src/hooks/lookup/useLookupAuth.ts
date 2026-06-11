@@ -1,14 +1,12 @@
 // src/app/lookup/hooks/useLookupAuth.ts
-// Quản lý toàn bộ flow xác thực: gửi OTP → xác thực OTP → nhận token quản lý
-
 import { useState, useEffect } from 'react'
 import { apiFetch } from '../../lib/api'
 import { BookingItem, LookupOtpVerifyResponse } from '../../types/booking'
 
 const STORAGE_KEYS = {
-  TOKEN:    'lk_mgmt_token',
-  PHONE:    'lk_mgmt_phone',
-  CODE:     'lk_mgmt_code',
+  TOKEN: 'lk_mgmt_token',
+  PHONE: 'lk_mgmt_phone',
+  CODE: 'lk_mgmt_code',
   BOOKINGS: 'lk_mgmt_bookings',
 } as const
 
@@ -43,20 +41,20 @@ export function useLookupAuth(
   onAuthSuccess: (bookings: BookingItem[], token: string) => void
 ): Omit<UseLookupAuthReturn, 'onAuthSuccess'> {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [phoneInput, setPhoneInput]           = useState('')
-  const [codeInput, setCodeInput]             = useState('')
-  const [isLoading, setIsLoading]             = useState(false)
-  const [errorMsg, setErrorMsg]               = useState<string | null>(null)
+  const [phoneInput, setPhoneInput] = useState('')
+  const [codeInput, setCodeInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [managementToken, setManagementToken] = useState<string | null>(null)
-  const [showOtpModal, setShowOtpModal]       = useState(false)
-  const [otpInput, setOtpInput]               = useState('')
-  const [isVerifyingOtp, setIsVerifyingOtp]   = useState(false)
+  const [showOtpModal, setShowOtpModal] = useState(false)
+  const [otpInput, setOtpInput] = useState('')
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
 
   // Khôi phục phiên làm việc từ LocalStorage khi khởi chạy trang
   useEffect(() => {
-    const savedToken    = localStorage.getItem(STORAGE_KEYS.TOKEN)
-    const savedPhone    = localStorage.getItem(STORAGE_KEYS.PHONE)
-    const savedCode     = localStorage.getItem(STORAGE_KEYS.CODE)
+    const savedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
+    const savedPhone = localStorage.getItem(STORAGE_KEYS.PHONE)
+    const savedCode = localStorage.getItem(STORAGE_KEYS.CODE)
     const cachedBookings = localStorage.getItem(STORAGE_KEYS.BOOKINGS)
 
     if (savedToken && savedPhone && cachedBookings) {
@@ -67,7 +65,7 @@ export function useLookupAuth(
       setIsAuthenticated(true)
       onAuthSuccess(bookings, savedToken)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleLookupSubmit = async (e: React.FormEvent) => {
@@ -79,22 +77,21 @@ export function useLookupAuth(
     setErrorMsg(null)
 
     // Bypass OTP nếu token cũ còn hợp lệ và thông tin khớp
-    const savedToken     = localStorage.getItem(STORAGE_KEYS.TOKEN)
-    const savedPhone     = localStorage.getItem(STORAGE_KEYS.PHONE)
-    const savedCode      = localStorage.getItem(STORAGE_KEYS.CODE)
+    const savedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
+    const savedPhone = localStorage.getItem(STORAGE_KEYS.PHONE)
+    const savedCode = localStorage.getItem(STORAGE_KEYS.CODE)
     const cachedBookings = localStorage.getItem(STORAGE_KEYS.BOOKINGS)
 
     if (
       savedToken &&
       savedPhone === phoneInput &&
-      savedCode === (codeInput || '') &&
       cachedBookings
     ) {
       const bookings: BookingItem[] = JSON.parse(cachedBookings)
       setManagementToken(savedToken)
       setIsAuthenticated(true)
       onAuthSuccess(bookings, savedToken)
-      return
+      return; 
     }
 
     setIsLoading(true)
@@ -151,7 +148,6 @@ export function useLookupAuth(
       setOtpInput('')
       onAuthSuccess(fetchedBookings, response.managementToken)
     } catch (err: any) {
-      // Trả error lên để page xử lý thông báo
       throw err
     } finally {
       setIsVerifyingOtp(false)

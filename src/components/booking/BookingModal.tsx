@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { useBooking } from "../../context/BookingContext"
+import { useRouter } from 'next/navigation';
 import BookingStepIndicator from "./BookingStepIndicator"
 import BookingStep1Service from "./BookingStep1Service"
 import BookingStep2Barber from "./BookingStep2Barber"
@@ -24,7 +25,7 @@ interface BarberMeta { id: string | number; name: string; role: string; avatar?:
 
 export default function BookingModal() {
   const { isOpen, preselectedItem, closeBooking } = useBooking()
-
+  const router = useRouter();
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<BookingFormData>({ ...EMPTY_FORM })
   const [serviceMeta, setServiceMeta] = useState<BookingService | null>(null)
@@ -79,8 +80,8 @@ export default function BookingModal() {
 
     if (meta.id === 'any') {
       // UI hiện "Barber bất kỳ", nhưng lưu id thật vào resolvedBarberId riêng
-      setResolvedBarberId(meta.resolvedId ?? null)  
-      setForm(f => ({ ...f, barberId: 'any' }))     
+      setResolvedBarberId(meta.resolvedId ?? null)
+      setForm(f => ({ ...f, barberId: 'any' }))
     } else {
       setResolvedBarberId(Number(meta.id))
       setForm(f => ({ ...f, barberId: meta.id }))
@@ -108,9 +109,21 @@ export default function BookingModal() {
     if (!bookingId) return
     setOtpError(null)
     await verifyOtp(bookingId, otp)
-    await confirmBooking(bookingId)
+    const response = await confirmBooking(bookingId)
+    if (response?.managementToken && response?.booking) {
+      localStorage.setItem('lk_mgmt_token', response.managementToken)
+      localStorage.setItem('lk_mgmt_phone', form.phone)
+      localStorage.setItem('lk_mgmt_code', '')
+
+      const bookings = Array.isArray(response.booking)
+        ? response.booking
+        : [response.booking]
+
+      localStorage.setItem('lk_mgmt_bookings', JSON.stringify(bookings))
+    }
+    router.push('/lookup');
     setStep(5)
-  }, [bookingId])
+  }, [bookingId, router, form])
 
   const handleResendOtp = useCallback(async () => {
     if (!bookingId) return
