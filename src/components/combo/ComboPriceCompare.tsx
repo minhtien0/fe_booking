@@ -19,7 +19,7 @@ function SavingsBar({ pct }: { pct: number }) {
   )
 }
 
-function BookButton({ label, serviceId }: { label: string; serviceId?: string | number }) {
+function BookButton({ label, comboId }: { label: string; comboId: string | number }) {
   const { openBooking } = useBooking()
   const [hovered, setHovered] = useState(false)
 
@@ -28,7 +28,7 @@ function BookButton({ label, serviceId }: { label: string; serviceId?: string | 
       type="button"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => openBooking(serviceId)}
+      onClick={() => openBooking({ id: Number(comboId), type: 'combo' })}
       className="relative w-full h-[50px] flex items-center justify-center overflow-hidden"
       style={{ background: "#b89a6a" }}
     >
@@ -127,7 +127,7 @@ export default function ComboPriceCompare({ combo }: { combo: ComboDetail }) {
           </ul>
 
           {/* dùng openBooking giống bên trên */}
-          <BookButton label="Đặt Lịch Ngay" serviceId={combo.id} />
+          <BookButton label="Đặt Lịch Ngay" comboId={combo.id} />
         </div>
       </div>
 

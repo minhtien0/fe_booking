@@ -2,21 +2,27 @@
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
 
+// Thêm type để phân biệt preselect là service hay combo
+export interface PreselectedItem {
+  id:   string | number
+  type: 'service' | 'combo'
+}
+
 interface BookingContextValue {
-  isOpen: boolean
-  preselectedService?: string | number
-  openBooking: (serviceId?: string | number) => void
-  closeBooking: () => void
+  isOpen:              boolean
+  preselectedItem?:    PreselectedItem
+  openBooking:         (item?: PreselectedItem) => void
+  closeBooking:        () => void
 }
 
 const BookingContext = createContext<BookingContextValue | null>(null)
 
 export function BookingProvider({ children }: { children: ReactNode }) {
-  const [isOpen, setIsOpen] = useState(false)
-  const [preselectedService, setPreselectedService] = useState<string | number | undefined>()
+  const [isOpen,           setIsOpen]           = useState(false)
+  const [preselectedItem,  setPreselectedItem]  = useState<PreselectedItem | undefined>()
 
-  const openBooking = useCallback((serviceId?: string | number) => {
-    setPreselectedService(serviceId)
+  const openBooking = useCallback((item?: PreselectedItem) => {
+    setPreselectedItem(item)
     setIsOpen(true)
     document.body.style.overflow = "hidden"
   }, [])
@@ -24,12 +30,11 @@ export function BookingProvider({ children }: { children: ReactNode }) {
   const closeBooking = useCallback(() => {
     setIsOpen(false)
     document.body.style.overflow = ""
-    // slight delay to let animation finish before clearing
-    setTimeout(() => setPreselectedService(undefined), 400)
+    setTimeout(() => setPreselectedItem(undefined), 400)
   }, [])
 
   return (
-    <BookingContext.Provider value={{ isOpen, preselectedService, openBooking, closeBooking }}>
+    <BookingContext.Provider value={{ isOpen, preselectedItem, openBooking, closeBooking }}>
       {children}
     </BookingContext.Provider>
   )

@@ -21,7 +21,7 @@ function getFirstDay(year: number, month: number) {
 interface Props {
   selectedDate: string
   selectedTime: string
-  barberId: string | number | null   // ← thêm để truyền vào query param
+  barberId: string | number | null   
   onDateChange: (d: string) => void
   onTimeChange: (t: string) => void
 }

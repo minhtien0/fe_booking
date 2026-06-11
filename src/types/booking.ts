@@ -13,6 +13,7 @@ export interface BookingBarber {
   name: string
   role: string
   avatar?: string
+  resolvedId?: number;
 }
 
 export interface BookingSlot {

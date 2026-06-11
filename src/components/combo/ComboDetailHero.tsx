@@ -11,14 +11,14 @@ function formatPrice(n: number) {
 }
 
 // ─── Booking CTA button ───────────────────────────────────────────────────────
-function BookButton({ label, serviceId }: { label: string; serviceId?: string | number }) {
+function BookButton({ label, comboId }: { label: string; comboId: string | number }) {
   const { openBooking } = useBooking()
   const [hovered, setHovered] = useState(false)
   return (
     <button
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => openBooking(serviceId)}
+      onClick={() => openBooking({ id: Number(comboId), type: 'combo' })}
       className="relative inline-flex items-center justify-center h-[52px] px-10 overflow-hidden"
       style={{ fontFamily: "'Montserrat', sans-serif" }}
     >
@@ -122,7 +122,7 @@ export default function ComboDetailHero({ combo }: { combo: ComboDetail }) {
               </div>
 
               <div className="hero-fadein" style={{ animationDelay: "0.48s" }}>
-                <BookButton label="Đặt lịch ngay"/>
+                <BookButton label="Đặt lịch ngay" comboId={combo.id}/>
               </div>
             </div>
 
@@ -169,7 +169,7 @@ export default function ComboDetailHero({ combo }: { combo: ComboDetail }) {
                   ))}
                 </ul>
 
-                <BookButton label="Đặt Ngay — Ưu Đãi Hôm Nay" />
+                <BookButton label="Đặt Ngay — Ưu Đãi Hôm Nay" comboId={combo.id}/>
               </div>
             </div>
 

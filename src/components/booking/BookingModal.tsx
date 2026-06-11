@@ -10,11 +10,9 @@ import BookingStep4Confirm from "./BookingStep4Confirm"
 import BookingStepOtp from "./BookingStepOtp"
 import BookingSuccess from "./BookingSuccess"
 import { verifyOtp, confirmBooking, resendOtp } from "../../lib/bookingApi"
-import { type BookingFormData, type BookingService } from "../../types/booking"
+import { type BookingFormData, type BookingService, type BookingBarber } from "../../types/booking"
 
-// ── Step index ───────────────────────────────────────────────────────────────
-// 0 Dịch vụ | 1 Barber | 2 Lịch hẹn | 3 Xác nhận (form + holdSlot) | 4 OTP | 5 Success
-const FOOTER_STEPS = [0, 1, 2] // Chỉ các step này dùng footer Next/Back
+const FOOTER_STEPS = [0, 1, 2]
 
 const EMPTY_FORM: BookingFormData = {
   name: "", phone: "", email: "",
@@ -25,28 +23,33 @@ const EMPTY_FORM: BookingFormData = {
 interface BarberMeta { id: string | number; name: string; role: string; avatar?: string }
 
 export default function BookingModal() {
-  const { isOpen, preselectedService, closeBooking } = useBooking()
+  const { isOpen, preselectedItem, closeBooking } = useBooking()
 
   const [step, setStep] = useState(0)
   const [form, setForm] = useState<BookingFormData>({ ...EMPTY_FORM })
   const [serviceMeta, setServiceMeta] = useState<BookingService | null>(null)
   const [barberMeta, setBarberMeta] = useState<BarberMeta | null>(null)
-
-  // State OTP flow
+  const [resolvedBarberId, setResolvedBarberId] = useState<number | null>(null)
   const [bookingId, setBookingId] = useState<number | null>(null)
   const [expiresAt, setExpiresAt] = useState<string>("")
   const [otpError, setOtpError] = useState<string | null>(null)
 
-  // ── Side effects ─────────────────────────────────────────────────────────
-
+  // ── Khi mở modal với preselectedItem (từ trang combo/service) ────────────
   useEffect(() => {
-    if (isOpen && preselectedService != null) {
-      setForm(f => ({ ...f, serviceId: preselectedService }))
-      setStep(1)
-    }
-  }, [isOpen, preselectedService])
+    if (!isOpen || !preselectedItem) return
 
-  // Reset toàn bộ khi đóng modal
+    if (preselectedItem.type === 'combo') {
+      // Preselect combo: set serviceId = combo.id, bỏ qua step 0 (đã chọn rồi)
+      setForm(f => ({ ...f, serviceId: preselectedItem.id }))
+      // serviceMeta sẽ được set bởi BookingStep1Service khi render
+      setStep(0) // Vẫn vào step 0 để user thấy combo đã được chọn sẵn
+    } else {
+      // Preselect service thông thường
+      setForm(f => ({ ...f, serviceId: preselectedItem.id }))
+      setStep(1) // Skip step 0, vào thẳng chọn barber
+    }
+  }, [isOpen, preselectedItem])
+
   useEffect(() => {
     if (!isOpen) {
       setTimeout(() => {
@@ -71,7 +74,18 @@ export default function BookingModal() {
     setForm(f => ({ ...f, ...patch }))
   }, [])
 
-  // ── Footer step logic ────────────────────────────────────────────────────
+  const handleBarberMeta = useCallback((meta: BookingBarber) => {
+    setBarberMeta(meta)
+
+    if (meta.id === 'any') {
+      // UI hiện "Barber bất kỳ", nhưng lưu id thật vào resolvedBarberId riêng
+      setResolvedBarberId(meta.resolvedId ?? null)  
+      setForm(f => ({ ...f, barberId: 'any' }))     
+    } else {
+      setResolvedBarberId(Number(meta.id))
+      setForm(f => ({ ...f, barberId: meta.id }))
+    }
+  }, [])
 
   const canNext = () => {
     if (step === 0) return form.serviceId != null
@@ -80,33 +94,21 @@ export default function BookingModal() {
     return false
   }
 
-  // Nút "Tiếp theo" ở footer chỉ dùng cho step 0–2
   const handleNext = () => {
     if (step < 3) setStep(s => s + 1)
   }
 
-  // ── Callbacks từ các Step component ─────────────────────────────────────
-
-  /**
-   * BookingStep4Confirm gọi sau khi POST /bookings/hold thành công
-   */
   const handleHoldSuccess = useCallback((id: number, exp: string) => {
     setBookingId(id)
     setExpiresAt(exp)
-    setStep(4) // → OTP
+    setStep(4)
   }, [])
 
-  /**
-   * BookingStepOtp: xác thực OTP rồi confirm booking
-   */
   const handleVerifyOtp = useCallback(async (otp: string) => {
     if (!bookingId) return
     setOtpError(null)
-    // 1. Verify OTP
     await verifyOtp(bookingId, otp)
-    // 2. Confirm ngay sau khi OTP đúng
     await confirmBooking(bookingId)
-    // 3. Chuyển Success
     setStep(5)
   }, [bookingId])
 
@@ -119,19 +121,17 @@ export default function BookingModal() {
 
   const isDone = step === 5
   const showFooter = FOOTER_STEPS.includes(step)
-  const totalVisible = 5 // step 0–4 hiển thị indicator (success ẩn)
 
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;1,300&family=Montserrat:wght@400;500;600;700&display=swap');
-        @keyframes modalIn  { from { opacity:0; transform:translateY(24px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
-        @keyframes stepIn   { from { opacity:0; transform:translateX(18px); }             to { opacity:1; transform:translateX(0); } }
+        @keyframes modalIn { from { opacity:0; transform:translateY(24px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes stepIn  { from { opacity:0; transform:translateX(18px); } to { opacity:1; transform:translateX(0); } }
         .booking-modal { animation: modalIn 0.4s cubic-bezier(0.16,1,0.3,1) both; }
         .step-in       { animation: stepIn  0.35s cubic-bezier(0.16,1,0.3,1) both; }
       `}</style>
 
-      {/* Backdrop */}
       <div
         className="fixed inset-0 z-[999] flex items-center justify-center p-4"
         style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(4px)" }}
@@ -142,10 +142,8 @@ export default function BookingModal() {
           style={{ maxHeight: "92vh" }}
           onClick={e => e.stopPropagation()}
         >
-          {/* Gold top bar */}
           <div className="h-1 w-full bg-[#b89a6a] shrink-0" />
 
-          {/* Header */}
           <div className="shrink-0 px-6 pt-6 pb-5 border-b border-[#f0ebe3]">
             <div className="flex items-start justify-between mb-5">
               <div>
@@ -168,15 +166,11 @@ export default function BookingModal() {
                 </svg>
               </button>
             </div>
-
-            {/* Step indicator: ẩn ở màn success */}
             {!isDone && <BookingStepIndicator current={step} />}
           </div>
 
-          {/* Body */}
           <div className="flex-1 overflow-y-auto px-6 py-7">
             {isDone ? (
-              // ── Step 5: Success ──────────────────────────────────────────
               <BookingSuccess
                 form={form}
                 service={serviceMeta ?? undefined}
@@ -185,48 +179,44 @@ export default function BookingModal() {
               />
             ) : (
               <div className="step-in" key={step}>
-
-                {/* Step 0: Chọn dịch vụ */}
                 {step === 0 && (
                   <BookingStep1Service
                     selected={form.serviceId}
+                    preselectedType={preselectedItem?.type}
                     onSelect={id => updateForm({ serviceId: id })}
                     onServiceMeta={setServiceMeta}
                   />
                 )}
-
-                {/* Step 1: Chọn barber */}
                 {step === 1 && (
                   <BookingStep2Barber
                     selected={form.barberId}
-                    onSelect={id => updateForm({ barberId: id })}
-                    onBarberMeta={setBarberMeta}
+                    onSelect={id => {
+                      // Nếu chọn barber cụ thể  cập nhật form luôn
+                      // Nếu chọn 'any'  handleBarberMeta sẽ lo (có busiestId)
+                      if (id !== 'any') updateForm({ barberId: id })
+                    }}
+                    onBarberMeta={handleBarberMeta}
                   />
                 )}
-
-                {/* Step 2: Chọn ngày giờ */}
                 {step === 2 && (
                   <BookingStep3DateTime
                     selectedDate={form.date}
                     selectedTime={form.time}
-                    barberId={form.barberId}
+                    barberId={resolvedBarberId}
                     onDateChange={d => updateForm({ date: d })}
                     onTimeChange={t => updateForm({ time: t })}
                   />
                 )}
-
-                {/* Step 3: Điền thông tin + holdSlot — tự có nút submit riêng */}
                 {step === 3 && (
                   <BookingStep4Confirm
                     form={form}
                     onChange={updateForm}
                     service={serviceMeta ?? undefined}
                     barber={barberMeta ?? undefined}
+                    resolvedBarberId={resolvedBarberId}
                     onHoldSuccess={handleHoldSuccess}
                   />
                 )}
-
-                {/* Step 4: Nhập OTP */}
                 {step === 4 && bookingId && (
                   <BookingStepOtp
                     phone={form.phone}
@@ -239,14 +229,13 @@ export default function BookingModal() {
             )}
           </div>
 
-          {/* Footer: chỉ hiện ở step 0–2 */}
           {showFooter && (
             <div className="shrink-0 px-6 py-5 border-t border-[#f0ebe3] flex items-center justify-between gap-4 bg-white">
               <button
                 onClick={() => setStep(s => s - 1)}
                 disabled={step === 0}
                 className="flex items-center gap-2 text-[12px] font-semibold tracking-[1.5px] uppercase disabled:opacity-30"
-                style={{ fontFamily: "'Montserrat',sans-serif", color: "#9e8060", transition: "opacity 0.2s" }}
+                style={{ fontFamily: "'Montserrat',sans-serif", color: "#9e8060" }}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -254,16 +243,15 @@ export default function BookingModal() {
                 Quay lại
               </button>
 
-              <span className="text-[11px] text-[#bbb]"
-                style={{ fontFamily: "'Montserrat',sans-serif" }}>
+              <span className="text-[11px] text-[#bbb]" style={{ fontFamily: "'Montserrat',sans-serif" }}>
                 Bước {step + 1} / 5
               </span>
 
               <button
                 onClick={handleNext}
                 disabled={!canNext()}
-                className="relative h-[44px] px-8 text-[11px] font-bold tracking-[2px] uppercase text-white disabled:opacity-40"
-                style={{ fontFamily: "'Montserrat',sans-serif", background: "#b89a6a", transition: "opacity 0.2s" }}
+                className="h-[44px] px-8 text-[11px] font-bold tracking-[2px] uppercase text-white disabled:opacity-40"
+                style={{ fontFamily: "'Montserrat',sans-serif", background: "#b89a6a" }}
               >
                 Tiếp theo →
               </button>

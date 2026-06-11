@@ -5,7 +5,7 @@ import { type BookingFormData, type BookingService, type BookingBarber } from ".
 import { holdSlot } from "../../lib/bookingApi"
 import { Turnstile } from "@marsidev/react-turnstile"
 
-function formatPrice(n: any) { 
+function formatPrice(n: any) {
   if (n === undefined || n === null) return "—"
   if (typeof n === "number") return n.toLocaleString("vi-VN") + "đ"
   if (typeof n === "string") {
@@ -66,11 +66,12 @@ interface Props {
   onChange: (f: Partial<BookingFormData>) => void
   service?: BookingService
   barber?: BookingBarber
+  resolvedBarberId?: number | null
   onHoldSuccess: (bookingId: number, expiresAt: string) => void
 }
 
 export default function BookingStep4Confirm({
-  form, onChange, service, barber, onHoldSuccess,
+  form, onChange, service, barber, resolvedBarberId, onHoldSuccess,
 }: Props) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -92,7 +93,7 @@ export default function BookingStep4Confirm({
     setLoading(true)
     try {
       const res = await holdSlot({
-        barber_id: Number(barber.id),
+        barber_id: resolvedBarberId ?? Number(barber?.id),
         service_id: service.type === 'service' ? Number(service.id) : undefined,
         combo_id: service.type === 'combo' ? Number(service.id) : undefined,
         booking_date: form.date,
