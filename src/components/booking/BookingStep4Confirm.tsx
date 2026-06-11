@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { type BookingFormData, type BookingService, type BookingBarber } from "../../types/booking"
 import { holdSlot } from "../../lib/bookingApi"
 import { Turnstile } from "@marsidev/react-turnstile"
@@ -76,8 +76,10 @@ export default function BookingStep4Confirm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [captchaToken, setCaptchaToken] = useState<string | null>(null)
-
-  const handleHold = async () => {
+  const isSubmittingRef = useRef(false)
+  const handleHold = async (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
+    if (isSubmittingRef.current || loading) return;
     if (!form.name.trim()) { setError("Vui lòng nhập họ và tên."); return }
     if (!form.phone.trim()) { setError("Vui lòng nhập số điện thoại."); return }
     if (!service?.id) { setError("Chưa chọn dịch vụ."); return }
@@ -89,9 +91,10 @@ export default function BookingStep4Confirm({
       return
     }
 
-    setError(null)
-    setLoading(true)
     try {
+      setError(null)
+      setLoading(true)
+      isSubmittingRef.current = true
       const res = await holdSlot({
         barber_id: resolvedBarberId ?? Number(barber?.id),
         service_id: service.type === 'service' ? Number(service.id) : undefined,
@@ -107,6 +110,8 @@ export default function BookingStep4Confirm({
       onHoldSuccess(res.booking_id, res.expires_at)
     } catch (err: any) {
       setError(err.message ?? "Đã có lỗi xảy ra. Vui lòng thử lại.")
+      setLoading(false)
+      isSubmittingRef.current = false
     } finally {
       setLoading(false)
     }
@@ -240,6 +245,7 @@ export default function BookingStep4Confirm({
 
       {/* Submit — gọi holdSlot */}
       <button
+        type="button"
         onClick={handleHold}
         disabled={loading}
         className="w-full h-[46px] text-[11px] font-bold tracking-[2.5px] uppercase text-white mt-6"
