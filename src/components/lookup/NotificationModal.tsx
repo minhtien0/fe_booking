@@ -1,8 +1,6 @@
 // src/app/lookup/components/NotificationModal.tsx
 // Popup thông báo kết quả (thành công / thất bại) dùng chung toàn trang
-
 import { NotificationState } from '../../types/booking'
-
 interface NotificationModalProps {
   notification: NotificationState
   onClose: () => void

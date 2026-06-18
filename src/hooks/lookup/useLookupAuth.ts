@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { apiFetch } from '../../lib/api'
 import { BookingItem, LookupOtpVerifyResponse } from '../../types/booking'
+import { getLookupBookings } from './../../lib/bookingApi';
 
 const STORAGE_KEYS = {
   TOKEN: 'lk_mgmt_token',
@@ -56,7 +57,6 @@ export function useLookupAuth(
     const savedPhone = localStorage.getItem(STORAGE_KEYS.PHONE)
     const savedCode = localStorage.getItem(STORAGE_KEYS.CODE)
     const cachedBookings = localStorage.getItem(STORAGE_KEYS.BOOKINGS)
-
     if (savedToken && savedPhone && cachedBookings) {
       const bookings: BookingItem[] = JSON.parse(cachedBookings)
       setManagementToken(savedToken)
@@ -65,7 +65,6 @@ export function useLookupAuth(
       setIsAuthenticated(true)
       onAuthSuccess(bookings, savedToken)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleLookupSubmit = async (e: React.FormEvent) => {
@@ -79,7 +78,6 @@ export function useLookupAuth(
     // Bypass OTP nếu token cũ còn hợp lệ và thông tin khớp
     const savedToken = localStorage.getItem(STORAGE_KEYS.TOKEN)
     const savedPhone = localStorage.getItem(STORAGE_KEYS.PHONE)
-    const savedCode = localStorage.getItem(STORAGE_KEYS.CODE)
     const cachedBookings = localStorage.getItem(STORAGE_KEYS.BOOKINGS)
 
     if (
@@ -91,7 +89,7 @@ export function useLookupAuth(
       setManagementToken(savedToken)
       setIsAuthenticated(true)
       onAuthSuccess(bookings, savedToken)
-      return; 
+      return;
     }
 
     setIsLoading(true)
@@ -126,12 +124,10 @@ export function useLookupAuth(
         }
       )
 
-      const fetchedBookings = Array.isArray(response.booking)
-        ? response.booking
-        : ([response.booking].filter(Boolean) as BookingItem[])
-
+      const token = response.managementToken;
+      const fetchedBookings = await getLookupBookings(token);
       if (fetchedBookings.length === 0) {
-        setErrorMsg('Không tìm thấy dữ liệu đặt lịch phù hợp.')
+        setErrorMsg('Không tìm thấy dữ liệu đặt lịch phù hợp.');
         setShowOtpModal(false)
         return
       }

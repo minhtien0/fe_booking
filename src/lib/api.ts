@@ -3,8 +3,6 @@ export interface ApiError {
   status: number
   message: string
 }
-
-// 👉 CHỈ dùng 1 nguồn API duy nhất
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001'
 

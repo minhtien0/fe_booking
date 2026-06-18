@@ -16,7 +16,6 @@ export interface ConfirmResponse {
   status: string
   confirmed_at: string
   managementToken: string
-  booking: BookingItem | BookingItem[] | null
   message: string
 }
 
@@ -63,5 +62,14 @@ export async function resendOtp(bookingId: number): Promise<{ message: string }>
   return apiFetch<{ message: string }>(`/bookings/${bookingId}/resend-otp`, {
     method: 'POST',
     body: JSON.stringify({}),
+  })
+}
+
+export async function getLookupBookings(token: string): Promise<BookingItem[]> {
+  return apiFetch<BookingItem[]>('/bookings/lookup', {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`, 
+    },
   })
 }

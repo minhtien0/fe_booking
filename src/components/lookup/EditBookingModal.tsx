@@ -1,8 +1,6 @@
 // src/app/lookup/components/EditBookingModal.tsx
 // Modal chỉnh sửa chi tiết lịch hẹn (tên, SĐT, ngày, giờ, ghi chú, lý do)
-
 import { BookingItem } from '../../types/booking'
-
 interface EditBookingModalProps {
   booking: BookingItem
   editName: string

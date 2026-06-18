@@ -12,6 +12,7 @@ import BookingStepOtp from "./BookingStepOtp"
 import BookingSuccess from "./BookingSuccess"
 import { verifyOtp, confirmBooking, resendOtp } from "../../lib/bookingApi"
 import { type BookingFormData, type BookingService, type BookingBarber } from "../../types/booking"
+import { getLookupBookings } from './../../lib/bookingApi';
 
 const FOOTER_STEPS = [0, 1, 2]
 
@@ -108,21 +109,24 @@ export default function BookingModal() {
   const handleVerifyOtp = useCallback(async (otp: string) => {
     if (!bookingId) return
     setOtpError(null)
-    await verifyOtp(bookingId, otp)
-    const response = await confirmBooking(bookingId)
-    if (response?.managementToken && response?.booking) {
-      localStorage.setItem('lk_mgmt_token', response.managementToken)
-      localStorage.setItem('lk_mgmt_phone', form.phone)
-      localStorage.setItem('lk_mgmt_code', '')
 
-      const bookings = Array.isArray(response.booking)
-        ? response.booking
-        : [response.booking]
+    try {
+      await verifyOtp(bookingId, otp)
+      const response = await confirmBooking(bookingId)
 
-      localStorage.setItem('lk_mgmt_bookings', JSON.stringify(bookings))
+      if (response?.managementToken) {
+        const token = response.managementToken
+        const bookings = await getLookupBookings(token)
+        localStorage.setItem('lk_mgmt_token', token)
+        localStorage.setItem('lk_mgmt_phone', form.phone)
+        localStorage.setItem('lk_mgmt_code', '')
+        localStorage.setItem('lk_mgmt_bookings', JSON.stringify(bookings))
+      }
+      router.push('/lookup')
+      setStep(5)
+    } catch (error: any) {
+      setOtpError(error?.message || 'Có lỗi xảy ra trong quá trình xác thực lịch hẹn.')
     }
-    router.push('/lookup');
-    setStep(5)
   }, [bookingId, router, form])
 
   const handleResendOtp = useCallback(async () => {

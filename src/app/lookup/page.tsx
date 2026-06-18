@@ -46,11 +46,9 @@ export default function LookupPage() {
         {!auth.isAuthenticated ? (
           <LookupFormSection
             phoneInput={auth.phoneInput}
-            codeInput={auth.codeInput}
             isLoading={auth.isLoading}
             errorMsg={auth.errorMsg}
             onPhoneChange={auth.setPhoneInput}
-            onCodeChange={auth.setCodeInput}
             onSubmit={auth.handleLookupSubmit}
           />
         ) : (

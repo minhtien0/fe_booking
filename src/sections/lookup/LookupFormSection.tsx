@@ -1,11 +1,9 @@
 // src/sections/lookup/LookupFormSection.tsx
 interface LookupFormSectionProps {
   phoneInput: string
-  codeInput: string
   isLoading: boolean
   errorMsg: string | null
   onPhoneChange: (v: string) => void
-  onCodeChange: (v: string) => void
   onSubmit: (e: React.FormEvent) => void
 }
 
@@ -16,11 +14,9 @@ const inputClass =
 
 export function LookupFormSection({
   phoneInput,
-  codeInput,
   isLoading,
   errorMsg,
   onPhoneChange,
-  onCodeChange,
   onSubmit,
 }: LookupFormSectionProps) {
   return (
@@ -40,19 +36,6 @@ export function LookupFormSection({
             value={phoneInput}
             onChange={e => onPhoneChange(e.target.value)}
             placeholder="Ví dụ: 0901234567"
-            className={inputClass}
-          />
-        </div>
-
-        <div>
-          <label className={labelClass} style={{ fontFamily: "'Montserrat', sans-serif" }}>
-            Mã lịch hẹn (Nếu có)
-          </label>
-          <input
-            type="text"
-            value={codeInput}
-            onChange={e => onCodeChange(e.target.value)}
-            placeholder="Ví dụ: BK-202606-004"
             className={inputClass}
           />
         </div>
