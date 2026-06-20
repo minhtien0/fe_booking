@@ -1,8 +1,11 @@
-// src/app/lookup/components/EditBookingModal.tsx
-// Modal chỉnh sửa chi tiết lịch hẹn (tên, SĐT, ngày, giờ, ghi chú, lý do)
-import { BookingItem } from '../../types/booking'
+"use client"
+
+import { useState, useEffect } from "react"
+import { BookingFormData } from '../../types/booking'
+import { apiFetch } from "../../lib/api" 
+
 interface EditBookingModalProps {
-  booking: BookingItem
+  booking: BookingFormData
   editName: string
   editPhone: string
   editDate: string
@@ -28,6 +31,68 @@ export function EditBookingModal({
   onNoteChange, onReasonChange,
   onSave, onClose,
 }: EditBookingModalProps) {
+  
+  // ── States quản lý giờ trống nội bộ ───────────────────────────────
+  const [availableSlots, setAvailableSlots] = useState<string[]>([])
+  const [slotsLoading, setSlotsLoading] = useState(false)
+  const [slotsError, setSlotsError] = useState(false)
+
+  // Lấy thông tin ngày, giờ, thợ gốc từ dữ liệu booking đã nạp đầy đủ
+  const originalDate = booking.date
+  const originalTime = booking.time
+  const barberId = booking.barberId
+
+  // Kiểm tra xem barberId có thực sự hợp lệ không (loại trừ undefined, null, chuỗi rỗng nhưng giữ lại số 0 nếu có)
+  const isBarberIdValid = barberId !== undefined && barberId !== null && barberId !== "";
+
+  // ── Tự động gọi API check slot khi Ngày thay đổi ──────────────────
+  useEffect(() => {
+    // Nếu chưa có ngày hoặc id thợ hợp lệ, reset slot trống và dừng lại
+    if (!editDate || !isBarberIdValid) {
+      // Bật log này lên ở F12 để kiểm tra xem lúc lỗi biến nào đang bị thiếu:
+      console.warn("Chưa gọi API tìm giờ trống vì khuyết dữ liệu:", { editDate, barberId });
+      setAvailableSlots([])
+      return
+    }
+
+    // Đóng gói chính xác param gửi lên backend
+    const params = new URLSearchParams({ 
+      date: editDate,
+      barberId: String(barberId) 
+    })
+
+    setSlotsLoading(true)
+    setSlotsError(false)
+
+    // Nếu người dùng đổi sang ngày khác, reset tạm thời giờ đang chọn
+    if (editDate !== originalDate) {
+      onTimeChange("")
+    } else {
+      // Nếu quay lại ngày gốc, khôi phục lại giờ gốc ban đầu
+      onTimeChange(originalTime || "")
+    }
+
+    apiFetch<{ success: boolean; availableSlots: string[] }>(`/bookings/availability?${params.toString()}`)
+      .then(res => {
+        setAvailableSlots(res.availableSlots ?? [])
+      })
+      .catch((err) => {
+        console.error("Lỗi tải khung giờ trống từ Server:", err)
+        setSlotsError(true)
+        setAvailableSlots([])
+      })
+      .finally(() => setSlotsLoading(false))
+
+  }, [editDate, barberId, isBarberIdValid, originalDate, originalTime, onTimeChange])
+
+  // ── Xử lý hiển thị danh sách giờ ──────────────────────────────────
+  const displaySlots = [...availableSlots]
+  // Nếu đang sửa trên đúng ngày cũ, lồng thêm giờ đã đặt cũ vào dropdown để hiển thị
+  if (editDate === originalDate && originalTime && !displaySlots.includes(originalTime)) {
+    displaySlots.push(originalTime)
+    displaySlots.sort()
+  }
+
   const inputClass =
     'w-full px-3 py-2 text-xs bg-[#faf8f5] border border-[#e8dfd5] rounded-lg focus:outline-none focus:border-[#b89a6a] focus:bg-white transition-all'
 
@@ -85,20 +150,52 @@ export function EditBookingModal({
               <input
                 type="date"
                 value={editDate}
+                min={new Date().toISOString().split('T')[0]} 
                 onChange={e => onDateChange(e.target.value)}
                 className={inputClass}
               />
             </div>
             <div>
               <label className="block text-[11px] font-bold tracking-[1px] uppercase text-[#7a6e62] mb-1">
-                Giờ bắt đầu
+                Giờ bắt đầu *
               </label>
-              <input
-                type="time"
-                value={editTime}
-                onChange={e => onTimeChange(e.target.value)}
-                className={`${inputClass} font-mono`}
-              />
+              
+              {/* BÓC TÁCH TRẠNG THÁI HIỂN THỊ ĐỂ BIẾT CHÍNH XÁC LỖI TỪ ĐÂU */}
+              {!editDate ? (
+                <select disabled className={`${inputClass} text-stone-400 italic bg-stone-50`}>
+                  <option>-- Vui lòng chọn ngày trước --</option>
+                </select>
+              ) : !isBarberIdValid ? (
+                <select disabled className={`${inputClass} text-red-500 border-red-200 bg-red-50 font-medium italic`}>
+                  <option>⚠️ Lỗi: Không lấy được thông tin ID thợ</option>
+                </select>
+              ) : slotsLoading ? (
+                <div className="w-full h-8 bg-[#faf8f5] border border-[#e8dfd5] rounded-lg flex items-center px-3">
+                  <span className="w-3 h-3 border-2 border-[#b89a6a] border-t-transparent rounded-full animate-spin mr-2" />
+                  <span className="text-[11px] text-stone-400 italic">Đang tìm giờ trống...</span>
+                </div>
+              ) : slotsError ? (
+                <select disabled className={`${inputClass} text-red-500 border-red-200`}>
+                  <option>⚠️ Lỗi kết nối dữ liệu khung giờ</option>
+                </select>
+              ) : displaySlots.length === 0 ? (
+                <select disabled className={`${inputClass} text-stone-400 italic`}>
+                  <option>Hết giờ trống trong ngày này</option>
+                </select>
+              ) : (
+                <select
+                  value={editTime}
+                  onChange={e => onTimeChange(e.target.value)}
+                  className={`${inputClass} font-mono cursor-pointer`}
+                >
+                  <option value="">-- Chọn khung giờ --</option>
+                  {displaySlots.map(t => (
+                    <option key={t} value={t}>
+                      {t} {editDate === originalDate && t === originalTime ? "(Giờ đang đặt)" : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 
@@ -115,7 +212,7 @@ export function EditBookingModal({
             />
           </div>
 
-          {/* Lý do chỉnh sửa – bắt buộc theo DTO Backend */}
+          {/* Lý do chỉnh sửa */}
           <div className="bg-[#fffbf5] border border-[#f5ebd8] p-3 rounded-xl">
             <label className="block text-[11px] font-bold tracking-[1px] uppercase text-amber-900 mb-1">
               Lý do chỉnh sửa lịch *{' '}
@@ -143,7 +240,7 @@ export function EditBookingModal({
             </button>
             <button
               onClick={onSave}
-              disabled={isSavingEdit}
+              disabled={isSavingEdit || slotsLoading || !editTime}
               className="px-5 py-2 text-[11px] font-bold tracking-[1px] uppercase bg-[#2c2520] hover:bg-[#b89a6a] text-white rounded-lg transition-all disabled:opacity-40"
               style={{ fontFamily: "'Montserrat', sans-serif" }}
             >
